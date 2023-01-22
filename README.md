@@ -4,3 +4,4 @@
 #### Image:
 ![Kyle Gordon](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/graphics/IMG_20210404_230821134.jpg)
 #### Avatar:
+![Avatar](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/graphics/Avatar.jpg)
