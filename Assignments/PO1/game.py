@@ -39,8 +39,8 @@ bomb_clicked = False
 card_clicked = False
 game_over = False
 spawn_card = True
-first_guess_num = 0
-second_guess_num = 0
+bomb_clicked_num = 0
+card_clicked_num = 0
 init_count = 0
 direction = ''
 
