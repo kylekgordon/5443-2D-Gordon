@@ -2,7 +2,7 @@
 ### Kyle Gordon
 ### Description:
 
-Re-activated account at DO. Created project and deploy droplet.
+Re-activated account at DO. Created project and deployed droplet.
 
 ### Files
 
