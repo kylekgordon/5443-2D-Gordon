@@ -359,7 +359,7 @@ while running:
                     if button.collidepoint(event.pos) and not card_clicked:
                         card_clicked = True
                         card_clicked_num = i
-                        print(first_guess_num)
+                        print(bomb_clicked_num)
 
     # print(board)
     if time_elapse == 0:
