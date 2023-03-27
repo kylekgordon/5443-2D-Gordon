@@ -1,4 +1,4 @@
-## P02 - 2048 Game
+## P02 - TwoPlayer Game - Projectile Dual - WarOnApes
 ### Kyle Gordon
 ### Description:
 
