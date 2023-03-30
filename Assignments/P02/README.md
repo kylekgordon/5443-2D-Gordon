@@ -14,9 +14,15 @@ bazooka. The bazooka launches a banana at the target.
 |   2   | assets  | Folder that holds assets used and images         |
 
 ### Instructions
-
+#### Player Right:
 - Left and Right arrow keys will be used to move closer or further away to target.
 - Up and Down arrow keys aim the bazooka.
+- Right shift to fire
+
+#### Player Left:
+- A and D keys will be used to move closer or further away to target.
+- W and S arrow keys aim the bazooka.
+- F key to fire
 
 +------------+
 | name1 age1 |
