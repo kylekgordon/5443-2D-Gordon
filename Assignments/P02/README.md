@@ -25,7 +25,7 @@ bazooka. The bazooka launches a banana at the target.
 - F key to fire
 
 ### Image:
-![Screenshot](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/P02/WarOnApes.png)
+![Screenshot](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/P02/WarOnApes.PNG)
 
 +------------+
 | name1 age1 |
