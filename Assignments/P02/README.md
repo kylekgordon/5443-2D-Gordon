@@ -24,6 +24,9 @@ bazooka. The bazooka launches a banana at the target.
 - W and S arrow keys aim the bazooka.
 - F key to fire
 
+### Image:
+![Screenshot](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/P02/WarOnApes.png)
+
 +------------+
 | name1 age1 |
 | name2 age2 |
