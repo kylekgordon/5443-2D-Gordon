@@ -41,3 +41,6 @@ Requires Python 3.
 pip install -r requirements.txt
 
 ```
+
+### Image:
+![Screenshot](https://github.com/kylekgordon/5443-2D-Gordon/blob/main/Assignments/P03/Spacers.JPG)
