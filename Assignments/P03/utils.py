@@ -1,13 +1,13 @@
 import random
-
+import math
 from pygame import Color
 from pygame.image import load
 from pygame.math import Vector2
 from pygame.mixer import Sound
-
+from pygame import math as pymath
 
 def load_sprite(name, with_alpha=True):
-    path = f"D:/5443-2D-Gaming-main/5443-2D-Gaming-main/Resources/12-Asterioids/assets/sprites/{name}.png"
+    path = f"sprites/{name}.png"
     loaded_sprite = load(path)
 
     if with_alpha:
@@ -17,7 +17,7 @@ def load_sprite(name, with_alpha=True):
 
 
 def load_sound(name):
-    path = f"D:/5443-2D-Gaming-main/5443-2D-Gaming-main/Resources/12-Asterioids/assets/sounds/{name}.wav"
+    path = f"sounds/{name}.wav"
     return Sound(path)
 
 
@@ -32,6 +32,28 @@ def get_random_position(surface):
         random.randrange(surface.get_width()),
         random.randrange(surface.get_height()),
     )
+
+
+def distance(p1, p2):
+    if isinstance(p1, tuple):
+        x1, y1 = p1
+        x2, y2 = p2
+        dx = x2 - x1
+        dy = y2 - y1
+        return math.sqrt(dx * dx + dy * dy)
+    else:
+        v1 = pymath.Vector2(p1)
+        v2 = pymath.Vector2(p2)
+        return v1.distance_to(v2)
+
+
+def direction(v1, v2):
+    dot = v1.dot(v2)
+    mag1 = v1.magnitude()
+    mag2 = v2.magnitude()
+    cos_angle = dot / (mag1 * mag2)
+    angle = math.degrees(math.acos(cos_angle))
+    return angle
 
 
 def get_random_velocity(min_speed, max_speed):
