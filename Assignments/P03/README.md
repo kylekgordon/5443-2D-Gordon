@@ -2,16 +2,18 @@
 ### Kyle Gordon
 ### Description:
 
-This is simple space game made with Python and Pygame. Using messaging to create
+This is simple space game made with Python and Pygame. It has single player against npc, and asteroids. Stay alive and use wormholes to teleport.
+Who can stay alive! Using messaging to create
 a mutiplayer game.
 
 ### Files
 
 |   #   | File            | Description                                        |
 | :---: | --------------- | -------------------------------------------------- |
-|   1   | main.py         | Main driver of my project that launches game.      |
-|   2   | assets  | Folder that holds assets used and images         |
-|   3   | comms.py  | Establishes communicaation for multiplayer capability         |
+|   1   | __main__.py         | Main driver of my project that launches game.      |
+|   2   | sprites  | Folder that holds sprite assets used and images         |
+|   3   | sounds  | Folder that holds sound/wav assets used in game.         
+|   4   | comms.py  | Establishes communication for multiplayer capability         |
 
 
 ### Instructions
@@ -37,5 +39,5 @@ Requires Python 3.
 
 ```
 pip install -r requirements.txt
-python space_rocks
+
 ```
