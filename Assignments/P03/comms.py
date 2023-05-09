@@ -1,5 +1,3 @@
-"""
-"""
 import json
 import os
 import sys
@@ -8,35 +6,44 @@ import pika
 import random
 from threading import Thread
 from rich import print
-import requests
+
+import subprocess
+
+
+# # Execute in command line
+# def countConnections():
+#     command = "curl -i -u admin:1922msuQAZ!! http://terrywgriffin:15672/api/queues/"
+#     proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
+#     script_response = proc.stdout.read().split("\n")
+#     resp = json.loads(script_response[7])
+#     return resp
+
 
 def isJson(myjson):
-  try:
-    json.loads(myjson)
-  except ValueError as e:
-    return False
-  return True
+    try:
+        json.loads(myjson)
+    except ValueError as e:
+        return False
+    return True
 
 
 class Comms(object):
-    """ This base class simply connects to the rabbitmq server and is used by both the sender 
-        and listener classes. 
+    """This base class simply connects to the rabbitmq server and is used by both the sender
+    and listener classes.
     """
 
-    
-
     def __init__(self, **kwargs):
-        """ Remember keyword arguments are params like: key=arg and order doesn't matter. Here is an
-            example connection:
+        """Remember keyword arguments are params like: key=arg and order doesn't matter. Here is an
+        example connection:
 
-            comms = Comms(
-                exchange="2dgame",
-                port="5672",
-                host="crappy2d.us",
-                user="yourteamname",
-                password= "yourpassword"
-            )
-            
+        comms = Comms(
+            exchange="2dgame",
+            port="5672",
+            host="crappy2d.us",
+            user="yourteamname",
+            password= "yourpassword"
+        )
+
         """
         self.exchange = kwargs.get("exchange", None)
         self.port = kwargs.get("port", 5432)
@@ -49,10 +56,10 @@ class Comms(object):
         # if not self.user in self._messageQueue:
         #     self._messageQueue[self.user] = []
 
-        self.establishConnection()
+        self.setupConnection()
 
-    def establishConnection(self, **kwargs):
-        """ This method basically authenticates with the message server using:
+    def setupConnection(self, **kwargs):
+        """This method basically authenticates with the message server using:
 
                 exchange: the 'channel' we will send messages on
                 host: the ip address or domain name of the server
@@ -71,35 +78,40 @@ class Comms(object):
         self.user = kwargs.get("user", self.user)
         self.password = kwargs.get("password", self.password)
 
-        # names is a list of expected keys to be passed in that I 
+        # names is a list of expected keys to be passed in that I
         # use for error checking,
         names = ["exchange", "port", "host", "user", "password"]
         params = [self.exchange, self.port, self.host, self.user, self.password]
 
-        # p[0] is the key and p[1] is the value 
+        # p[0] is the key and p[1] is the value
         for p in zip(names, params):
             if not p[1]:
                 print(
-                    f"Error: connection parameter `{p[0]}` missing in class Comms method `establishConnection`!"
+                    f"Error: connection parameter `{p[0]}` missing in class Comms method `setupConnection`!"
                 )
                 sys.exit()
 
         # establish credentials and auth values
         credentials = pika.PlainCredentials(self.user, self.password)
-        parameters = pika.ConnectionParameters(
-            self.host, int(self.port), self.exchange, credentials
+        self.parameters = pika.ConnectionParameters(
+            self.host, int(self.port), self.exchange, credentials, heartbeat=60
         )
 
-        # make the connection and choose "exchange" to communicate with
-        self.connection = pika.BlockingConnection(parameters)
-        self.channel = self.connection.channel()
-        self.channel.exchange_declare(exchange=self.exchange, exchange_type="topic")
+        self.connect()
+
+    def connect(self):
+        try:
+            self.connection = pika.BlockingConnection(self.parameters)
+            self.channel = self.connection.channel()
+            self.channel.exchange_declare(exchange=self.exchange, exchange_type="topic")
+        except pika.exceptions.AMQPConnectionError:
+            time.sleep(2)
+            self.connect()
 
 
 class CommsListener(Comms):
     def __init__(self, **kwargs):
-        """Extends base class Comms.  
-        """
+        """Extends base class Comms."""
         self.binding_keys = kwargs.get("binding_keys", [])
 
         super().__init__(**kwargs)
@@ -109,7 +121,7 @@ class CommsListener(Comms):
 
         A binding key is a way of "subscribing" to a specific messages. Without
         getting to the difference between "routing" and "topics". The example below
-        shows how a routing key can include multiple items and be directed based on any 
+        shows how a routing key can include multiple items and be directed based on any
         of the words below:
 
            python.javascript.cpp
@@ -132,8 +144,8 @@ class CommsListener(Comms):
         add binding keys for anything with your teamname (or maybe id) in it.
 
         """
-        result = self.channel.queue_declare("", exclusive=True)
-        self.queue_name = result.method.queue
+        self.queueState = self.channel.queue_declare("", exclusive=True)
+        self.queue_name = self.queueState.method.queue
 
         if binding_keys == None and len(self.binding_keys) == 0:
             self.binding_keys = ["#"]
@@ -146,7 +158,7 @@ class CommsListener(Comms):
                 exchange=self.exchange, queue=self.queue_name, routing_key=binding_key
             )
 
-    def startConsuming(self,callback=None):
+    def startConsuming(self, callback=None):
         if not callback:
             callback = self.callback
         self.channel.basic_consume(
@@ -161,14 +173,14 @@ class CommsListener(Comms):
 
         if isJson(body):
             tmp = json.loads(body)
-        if 'from' in tmp:
-            if not tmp['from'] in self.messageQueue:
-                self.messageQueue[tmp['from']] = []
-            self.messageQueue[tmp['from']].append(f"{body}")
+        if "from" in tmp:
+            if not tmp["from"] in self.messageQueue:
+                self.messageQueue[tmp["from"]] = []
+            self.messageQueue[tmp["from"]].append(f"{body}")
 
         print(self.messageQueue)
 
-    def threadedListen(self,callback=None):
+    def threadedListen(self, callback=None):
         self.bindKeysToQueue([f"#.{self.user}.#", "#.broadcast.#"])
         Thread(
             target=self.startConsuming,
@@ -185,33 +197,47 @@ class CommsSender(Comms):
         super().__init__(**kwargs)
 
     def send(self, target, sender, body, closeConnection=True):
-        #print(f"Sending: target: {target}, body: {body}")
+        # print(f"Sending: target: {target}, body: {body}")
 
         body = json.loads(body)
 
         body["from"] = sender
 
-        self.channel.basic_publish(
-            self.exchange, routing_key=target, body=json.dumps(body)
-        )
+        try:
+            self.publish(target, body)
+        except pika.exceptions.AMQPConnectionError:
+            self.connect()
+            self.publish(target, body)
+
         if closeConnection:
             self.connection.close()
 
+    def publish(self, target, body):
+        """Publish msg"""
+
+        self.channel.basic_publish(
+            self.exchange, routing_key=target, body=json.dumps(body)
+        )
+
     def threadedSend(self, **kwargs):
-        """ Immediately calls send with a thread.
-        """
-        target = kwargs.get('target','broadcast')
-        sender = kwargs.get('sender','unknown')
-        body = kwargs.get('body',{})
-        closeConnection = kwargs.get('closeConnection',False)
-        debug = kwargs.get('debug',False)
-    
+        """Immediately calls send with a thread."""
+        target = kwargs.get("target", "broadcast")
+        sender = kwargs.get("sender", "unknown")
+        body = kwargs.get("body", {})
+        closeConnection = kwargs.get("closeConnection", False)
+        debug = kwargs.get("debug", False)
+
         if debug:
             print(f"Calling send via Thread")
 
         Thread(
             target=self.send,
-            args=(target,sender,body,closeConnection,),
+            args=(
+                target,
+                sender,
+                body,
+                closeConnection,
+            ),
             daemon=True,
         ).start()
 
@@ -219,31 +245,11 @@ class CommsSender(Comms):
         self.connection.close()
 
 
-
-
-
-# class MultiComms:
-#     def __init__(self):
-#         self.currentConnections = {}
-#         self.getCurrentConnections()
-
-    
-#     def getCurrentConnections(self):
-#         response = requests.get('http://terrywgriffin.com:8080/connections/?verbose=false')
-#         if response.status_code == 200:
-#             response = response.json()
-        
-#         for row in response:
-#             if not row['vhost'] in self.currentConnections:
-#                 self.currentConnections[row['vhost']] = []
-#             self.currentConnections[row['vhost']].append(row['user'])
-
-
-
 def usage():
     print("Error: You need to choose `send` or `listen` and optionally `teamName`!")
     print("Usage: python CommsClass <send,listen>")
     sys.exit()
+
 
 def mykwargs(argv):
     """
@@ -274,22 +280,17 @@ def mykwargs(argv):
 
 
 if __name__ == "__main__":
-
-    MultiComms()
-
     if len(sys.argv) < 2:
         usage()
 
-    args,kwargs = mykwargs(sys.argv)
+    args, kwargs = mykwargs(sys.argv)
 
-    user = kwargs.get('user','player-1')
-    passwd = user+'2023!!!!!'
-    # passwd = kwargs.get('passwd','player-12023!!!')
-    target = kwargs.get('target','player-2')
-    # cmd = kwargs.get('cmd','message')
-    # body = kwargs.get('body','hello world')
-    method = kwargs.get('method','listen')
-    exchange = kwargs.get('exchange','game1')
+    user = kwargs.get("user", "player-1")
+    passwd = user + "2023!!!!!"
+    target = kwargs.get("target", "player-2")
+    
+    method = kwargs.get("method", "listen")
+    exchange = kwargs.get("exchange", "game1")
 
     creds = {
         "exchange": exchange,
@@ -299,44 +300,49 @@ if __name__ == "__main__":
         "password": passwd,  # user.capitalize() * 3,
     }
 
-
-    
     if method == "send":
-
         exampleMessages = [
-            {"cmd":"message","body": {"messageTxt":"hello world"}},
-            {"cmd":"move","body": {"startLon":34.1234,"startLat":-98.452,"endLon":34.1234,"endLat":-98.452}},
-            {"cmd":"move","body": {"dx":-4,"dy":4}},
-            {"cmd":"fire","body": {"angle":23,"velocity":320}},
-            {"cmd":"move","body": {"dx":-4,"dy":4,"angle":231}}
+            {"cmd": "message", "body": {"messageTxt": "hello world"}},
+            {
+                "cmd": "move",
+                "body": {
+                    "startLon": 34.1234,
+                    "startLat": -98.452,
+                    "endLon": 34.1234,
+                    "endLat": -98.452,
+                },
+            },
+            {"cmd": "move", "body": {"dx": -4, "dy": 4}},
+            {"cmd": "fire", "body": {"angle": 23, "velocity": 320}},
+            {"cmd": "move", "body": {"dx": -4, "dy": 4, "angle": 231}},
         ]
-        
-        users = ['player-1','player-2','player-3','player-4','player-5']
-        vhosts = ['vhost1','vhost2','vhost3','vhost4','vhost5']
+
+        users = ["player-1", "player-2", "player-3", "player-4", "player-5"]
+        vhosts = ["vhost1", "vhost2", "vhost3", "vhost4", "vhost5"]
 
         senders = []
- 
-        for i in range(1,10):
-            id = (i % 2) + 1
-            user = f'player-{id}'
-            creds['user'] = user
-            creds['password']= user+'2023!!!!!'
 
-            creds['exchange'] = f'game{id}'
+        for i in range(1, 10):
+            id = (i % 2) + 1
+            user = f"player-{id}"
+            creds["user"] = user
+            creds["password"] = user + "2023!!!!!"
+
+            creds["exchange"] = f"game{id}"
             print(creds)
             senders.append(CommsSender(**creds))
-        
-            # cmd = random.choice(body[cmd])
-            # data = random.choice(body[cmd])
-            senders[-1].send(target=user, sender=user,body=json.dumps(random.choice(exampleMessages)))
+
+            
+            senders[-1].send(
+                target=user,
+                sender=user,
+                body=json.dumps(random.choice(exampleMessages)),
+            )
             time.sleep(2)
 
     else:
-
         print("Comms Listener starting. To exit press CTRL+C ...")
 
         commsListener = CommsListener(**creds)
-        # m = MultiComms('player-4','game1')
         commsListener.bindKeysToQueue([f"#.{user}.#", "#.broadcast.#"])
         commsListener.startConsuming()
-        

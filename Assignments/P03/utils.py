@@ -69,3 +69,15 @@ def print_text(surface, text, font, color=Color("tomato")):
     rect.center = Vector2(surface.get_size()) / 2
 
     surface.blit(text_surface, rect)
+
+def mykwargs(argv):
+    args = []
+    kargs = {}
+
+    for arg in argv:
+        if "=" in arg:
+            key, val = arg.split("=")
+            kargs[key] = val
+        else:
+            args.append(arg)
+    return args, kargs

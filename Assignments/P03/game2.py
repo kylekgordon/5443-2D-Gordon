@@ -2,7 +2,7 @@ import pygame
 from rich import json
 import sys
 
-from models import Asteroid, Spaceship, NPC, Wormhole1, Wormhole2, Damage_bar, Barrel
+from models2 import Asteroid, Spaceship, NPC, Wormhole1, Wormhole2, Damage_bar, Barrel
 from utils import get_random_position, load_sprite, print_text, load_sound, mykwargs
 
 
@@ -10,9 +10,7 @@ import pygame
 import math
 import random
 from pygame.math import Vector2
-from comms import CommsSender, CommsListener
 from manager import commsManager
-
 from urllib.request import urlopen
 
 # Color library
@@ -35,40 +33,11 @@ ships = ["space_ship1", "space_ship2", "space_ship3",
          "space_ship10"]
 display_time = 1000  # Time in milliseconds to display each image
 
-# def callback(ch, method, properties, body):
-#     """This method gets run when a message is received. You can alter it to
-#     do whatever is necessary.
-#     """
-#     #body = body.decode("utf-8")
-#     print(body)
-
 
 class Spacers:
     MIN_ASTEROID_DISTANCE = 250
 
     def __init__(self):
-        """
-        To Run: py/python __main__.py game-01 player-01
-        """
-        url = "https://terrywgriffin.com/current_usage.json"
-        response = urlopen(url)
-        data_json = json.loads(response.read())
-        if len(data_json['players']) >= 10:
-            print(data_json['players'])
-            print("max users exceed!")
-            exit(111)
-
-        args, kwargs = mykwargs(sys.argv)
-
-        queue = kwargs.get("queue", None)
-        playerId = kwargs.get("player", None)
-        creds = {
-            "exchange": queue,
-            "port": "5672",
-            "host": "terrywgriffin.com",
-            "user": playerId,
-            "password": playerId + "2023!!!!!",
-        }
 
         self._init_pygame()
         self.screen = pygame.display.set_mode((800, 600))
@@ -82,7 +51,7 @@ class Spacers:
         self.taunt = load_sound("Funny-16")
         self.spawn = load_sound("SpawnKG")
         self.teleport = load_sound("TeleportKG")
-        #self.song = pygame.mixer.music.load("sounds/song21.wav")
+        
         pygame.mixer.music.play(-1)
         self.targets = []
         self.asteroids = []
@@ -96,18 +65,11 @@ class Spacers:
         self.npc = NPC((random.randrange(10, 790, 1), random.randrange(10, 790, 1)), self.bullets.append, random.choice(ships), self.targets)
         self.enemies = []
 
-        self.manager = commsManager(self.bullets.append)
-        localSpaceShip = Spaceship((400,300),self.bullets.append, None, None,
-           id=playerId,creds=creds, callback= self.manager.callBack)
-        
-        self.manager.addPlayer(None, None, player=localSpaceShip, localPlayer=True)
+        # self.manager.addPlayer(None, player=localSpaceShip, localPlayer=True)
 
-        self.spaceship = localSpaceShip
-        
-        # Changed this to 1 so it would only generate 1 asteroid :)
-        Asteroids = 2
-
-        for _ in range(Asteroids):
+        self.spaceship = Spaceship((400, 300), self.bullets.append)
+        # Griffin changed this to 1 so it would only generate 1 asteroid :)
+        for _ in range(2):
             while True:
                 position = get_random_position(self.screen)
                 if (
@@ -122,6 +84,7 @@ class Spacers:
             self.barrels.append(Barrel((random.randrange(10, 790, 1), random.randrange(10, 790, 1)), self.barrels.append))
 
         if len(self.enemies) == 0:
+            #self.targets.append(self.npc)
             self.targets.append(self.spaceship)
             self.enemies.append(NPC((random.randrange(10, 790, 1), random.randrange(10, 790, 1)), self.bullets.append, random.choice(ships), self.targets))
 
@@ -138,11 +101,11 @@ class Spacers:
             health_spawn -= 1
 
             if time_elapse == 0 and self.message != "You Won!" and self.message != "You lost!":
-                if len(self.targets) == 0:
+                if len(self.enemies) == 0:
                     self.targets.append(self.spaceship)
-                #     self.targets.append(self.npc)
+                    self.targets.append(self.npc)
                 self.spawn.play()
-                # self.enemies.append(NPC((random.randrange(10, 790, 1), random.randrange(10, 790, 1)), self.bullets.append, random.choice(ships), self.targets))
+                self.enemies.append(NPC((random.randrange(10, 790, 1), random.randrange(10, 790, 1)), self.bullets.append, random.choice(ships), self.targets))
                 time_elapse = 500
 
             if health_spawn == 0:
@@ -152,6 +115,7 @@ class Spacers:
     def _init_pygame(self):
 
         pygame.init()
+        
         pygame.display.set_caption("Spacers")
 
     def _handle_input(self):
@@ -166,54 +130,39 @@ class Spacers:
                 and event.key == pygame.K_SPACE
             ):
                 self.spaceship.shoot()
-                self.spaceship.sendShoot()
 
         is_key_pressed = pygame.key.get_pressed()
 
         if self.spaceship:
             if is_key_pressed[pygame.K_RIGHT]:
                 self.spaceship.rotate(clockwise=True)
-                self.spaceship.sendData()
             if is_key_pressed[pygame.K_LEFT]:
                 self.spaceship.rotate(clockwise=False)
-                self.spaceship.sendData()
             if is_key_pressed[pygame.K_UP]:
                 self.spaceship.accelerate()
-                self.spaceship.sendData()
             if is_key_pressed[pygame.K_DOWN]:
                 self.spaceship.decelerate()
-                self.spaceship.sendData()
             if is_key_pressed[pygame.K_b]:
                 self.spaceship.brake()
-                self.spaceship.sendData()
                 
     def _process_game_logic(self):
-
-        self.manager.update(self.screen)
 
         for game_object in self._get_game_objects():
             game_object.move(self.screen)
 
-        for id, player in self.manager.players.items():
-            for bullet in self.bullets:
-                if bullet.collides_with(player) and bullet.id != id:
-                    self.bullets.remove(bullet)
-                    break
 
         if self.spaceship:
-            # self.damage_bar.update(self.spaceship.damage, self.spaceship.kills)
+            self.damage_bar.update(self.spaceship.damage, self.spaceship.kills)
             if self.spaceship.damage >= 100:
                     self.spaceship = None
                     self.explosion.play()
-                    # self.spaceship.destroyed = True
                     self.message = "You lost!"
             if self.spaceship is not None:
                 for asteroid in self.asteroids:
                     #print(asteroid)
                     if self.spaceship.collides_with(asteroid):
                         self.hit.play()
-                        # self.spaceship.damage += 10
-                        self.spaceship.hit()
+                        self.spaceship.damage += 10
                         #self.damage_bar.update(self.spaceship.damage)
                         self.asteroids.remove(asteroid)
                         asteroid.split()
@@ -283,21 +232,8 @@ class Spacers:
                     break
 
         for bullet in self.bullets[:]:
-            if bullet.collides_with(self.spaceship) and bullet.id != self.spaceship.id:
-                self.spaceship.hit()
-                self.spaceship.sendData()
-                self.bullets.remove(bullet)
-                break
-
-        for bullet in self.bullets[:]:
             if not self.screen.get_rect().collidepoint(bullet.position):
                 self.bullets.remove(bullet)
-
-            # if bullet.belongTo == "player" and bullet.collides_with(self.npc):
-            #     self.npc.damage += 5
-            #     self.hit.play()
-            #     self.bullets.remove(bullet)
-            #     break
 
             if self.spaceship and bullet.belongTo == "npc" and bullet.collides_with(self.spaceship):
                 self.spaceship.damage += 5
@@ -313,17 +249,16 @@ class Spacers:
                     break
 
         if len(self.enemies) == 0:
-            # self.message = "You Won!"
-            pass
+            self.message = "You Won!"
+            # pass
 
-        # if not self.npc and self.spaceship:
-        #     self.message = "You won!"
+        if not self.npc and self.spaceship:
+            self.message = "You won!"
 
     def _draw(self):
         global time_elapse
         self.screen.blit(self.background, (0,0))
 
-        self.manager.draw(self.screen)
         for game_object in self._get_game_objects():
             #print(game_object)
             game_object.draw(self.screen)
@@ -338,9 +273,6 @@ class Spacers:
             self.damage_bar
         else:
             self.damage_bar.update(100, self.spaceship.kills)
-
-        if self.spaceship:
-            self.spaceship.damage_bar(self.screen)
 
         for enemy in self.enemies:
             if enemy:

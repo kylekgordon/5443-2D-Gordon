@@ -161,15 +161,6 @@ class Messenger:
             target=target, sender=self.user, body=json.dumps(kwargs), debug=False
         )
 
-    def setCallback(self, callBack):
-        """
-        sets the callback function for the messenger
-        Args:
-            callBack : 
-        """
-        self.callBack = callBack
-        self.commsListener.threadedListen(self.callBack)
-
 class GameObject:
     def __init__(self, position, sprite, velocity):
         self.position = Vector2(position)
@@ -206,7 +197,7 @@ class Spaceship(GameObject):
     ACCELERATION = 0
     BULLET_SPEED = 10
 
-    def __init__(self, position, create_bullet_callback, ship, bullet, **kwargs):
+    def __init__(self, position, create_bullet_callback, ship = random.choice(ships), **kwargs):
         self.create_bullet_callback = create_bullet_callback
         self.laser_sound = load_sound("PewFire2")
         self.explode_sound = load_sound("CrashKG")
@@ -215,41 +206,8 @@ class Spaceship(GameObject):
         self.damage = 0
         self.kills = 0
         self.speed = 5
-        self.destroyed = False
 
-        if ship == None:
-            self.ship = random.choice(ships)
-            self.bullet = f"sprites/{bullet}.png"
-        
-        else:
-            self.ship = ship
-            self.bullet = bullet
-        
-        self.creds = kwargs.get("creds", None)
-        self.callback = kwargs.get("callback", None)
-        self.id = kwargs.get("id", None)
-
-        if self.creds is not None:
-            self.messenger = Messenger(self.creds, self.callback)
-        self.lastBroadcast = pygame.time.get_ticks()
-        self.broadCastDelay = 0
-
-        super().__init__(position, load_sprite(self.ship), Vector2(0))
-
-    def timeToBroadCast(self):
-        """check to see if there was enough delay to broadcast again"""
-        return pygame.time.get_ticks() - self.lastBroadcast > self.broadCastDelay
-
-    def broadcastData(self, data):
-        if self.timeToBroadCast():
-            self.messenger.send(
-                target="broadcast", sender=self.id, player=self.id, data=data
-            )
-            self.lastBroadcast = pygame.time.get_ticks()
-            return True
-
-        return False
-
+        super().__init__(position, load_sprite(ship), Vector2(0))
 
     def rotate(self, clockwise=True):
         sign = 1 if clockwise else -1
@@ -261,8 +219,6 @@ class Spaceship(GameObject):
         if self.ACCELERATION > 1:
             self.velocity -= self.direction * self.ACCELERATION
         self.velocity += self.direction * self.ACCELERATION
-
-        #CommsSender({"target": "broadcast", "sender": "player", "body": "accelerating"})
 
     def decelerate(self):
         self.ACCELERATION = 0.1
@@ -278,39 +234,12 @@ class Spaceship(GameObject):
     def shoot(self):
         angle = self.direction.angle_to(UP)
         bullet_velocity = self.direction * self.BULLET_SPEED + self.velocity
-        bullets = Bullet(self.position, bullet_velocity, self.id, angle, "player")
-        self.create_bullet_callback(bullets)
+        bullet = Bullet(self.position, bullet_velocity, angle, "player")
+        self.create_bullet_callback(bullet)
         self.laser_sound.play()
 
     def brake(self):
         self.velocity = [0, 0]
-
-    def sendData(self):
-        self.broadcastData(
-            {
-                "pos": (self.position.x, self.position.y),
-                "vel": (self.velocity[0], self.velocity[1]),
-                "dir": (self.direction.x, self.direction.y),
-                "shoot": False,
-                "damage": self.damage,
-                "destroyed": self.destroyed,
-                "ship":self.ship,
-                "bullet":self.bullet,
-                "kills":self.kills
-            }
-        )
-
-    def sendShoot(self):
-        self.broadcastData(
-            {
-                "pos": (self.position.x, self.position.y),
-                "vel": (self.velocity[0], self.velocity[1]),
-                "dir": (self.direction.x, self.direction.y),
-                "shoot": True,
-                "damage": self.damage,
-                "destroyed": self.destroyed
-            }
-        )
 
     def explode(self, screen):
         global current_image
@@ -325,21 +254,11 @@ class Spaceship(GameObject):
         current_image += 1
         if current_image >= len(explosion_paths):
             current_image = 0
-
-    def hit(self):
-        self.damage += 10
-        if self.damage >= 100:
-            self.damage = 100
-            # self.explode()
-
-    def damage_bar(self, screen):
-        pygame.draw.rect(screen, (red), (self.position.x - 25, self.position.y - 60, 50, 5))
-        pygame.draw.rect(screen, (green), (self.position.x - 25, self.position.y - 60, 50 - (self.damage/2), 5))
  
 
 class NPC(Spaceship):
     def __init__(
-        self, position, create_bullet_callback, ship=random.choice(ships), bullet = f"sprites/{bullet}.png" , targets=[]
+        self, position, create_bullet_callback, ship=random.choice(ships), targets=[]
     ):
         self.targets = targets
         self.damage = 0
@@ -348,7 +267,7 @@ class NPC(Spaceship):
         self.rect = self.image.get_rect()
         self.countShootTime = 0
 
-        super().__init__(position, create_bullet_callback, ship, bullet)
+        super().__init__(position, create_bullet_callback, ship)
 
     def choose_target(self):
         closestDistance = pow(2, 20)
@@ -373,13 +292,13 @@ class NPC(Spaceship):
             self.countShootTime = 0
             angle = self.direction.angle_to(UP)
             bullet_velocity = self.direction * self.BULLET_SPEED/2 + self.velocity
-            bullet = Bullet(self.position, bullet_velocity, None, angle, "npc")
+            bullet = Bullet(self.position, bullet_velocity, angle, "npc")
             self.create_bullet_callback(bullet)
             self.laser_sound.play()
 
     def damage_bar(self, screen):
-        pygame.draw.rect(screen, (red), (self.position.x - 25, self.position.y - 60, 50, 5))
-        pygame.draw.rect(screen, (green), (self.position.x - 25, self.position.y - 60, 50 - (self.damage/2), 5))
+        pygame.draw.rect(screen, (red), (self.position.x - 50, self.position.y - 60, 100, 10))
+        pygame.draw.rect(screen, (green), (self.position.x - 50, self.position.y - 60, 100 - self.damage, 10))
         #screen.blit(current_image, (self.position.x - 50, self.position.y - 60))
 
     def remove(self):
@@ -407,13 +326,13 @@ class Asteroid(GameObject):
 
 
 class Bullet(GameObject):
-    def __init__(self, position, velocity, id, angle, belongTo):
+    def __init__(self, position, velocity, angle, belongTo):
         
         super().__init__(position, load_sprite(f"{bullet}"), velocity)
         #self.sprite = pygame.transform.scale(self.sprite, (30, 30))
         self.sprite = pygame.transform.rotozoom(self.sprite, angle, 0.3)
         self.radius = self.sprite.get_width() / 2
-        self.id = id
+        # self.id = id
         self.belongTo = belongTo
         
     def move(self, surface):
@@ -440,6 +359,12 @@ class Wormhole1(GameObject):
         self.pos1 = Vector2(random.randrange(0, 400), random.randrange(0, 450))
 
         self.radius = 40
+
+        # Call the superclass constructor
+        # for i in range(0, 64):
+        # wormhole = images[i]
+        # wormhole = pygame.transform.scale(wormhole, (200, 150))
+        # screen.blit(wormhole, position)
 
     def drawHole(self, pos):
         global current_image_1
@@ -498,6 +423,12 @@ class Wormhole2(GameObject):
         self.pos2 = Vector2(random.randrange(400, 600), random.randrange(0, 450))
 
         self.radius = 40
+
+        # Call the superclass constructor
+        # for i in range(0, 64):
+        # wormhole = images[i]
+        # wormhole = pygame.transform.scale(wormhole, (200, 150))
+        # screen.blit(wormhole, position)
 
     def drawHole(self, pos):
         global current_image_2
