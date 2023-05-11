@@ -10,7 +10,7 @@ a mutiplayer game.
 
 |   #   | File            | Description                                        |
 | :---: | --------------- | -------------------------------------------------- |
-|   1   | __main__.py         | Main driver of my project that launches game.      |
+|   1   | main.py         | Main driver of my project that launches game.      |
 |   2   | sprites  | Folder that holds sprite assets used and images         |
 |   3   | sounds  | Folder that holds sound/wav assets used in game.         
 |   4   | comms.py  | Establishes communication for multiplayer capability         |
@@ -21,6 +21,7 @@ a mutiplayer game.
 - Left and Right arrow keys will be used to rotate ship.
 - Up and Down arrow keys will be used to move closer or further away to target.
 - Spacebar key is used to fire rockets.
+- Run: py main.py queue=game-01 player=player-01
 
 +------------+
 | name1 age1 |
