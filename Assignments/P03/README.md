@@ -1,5 +1,5 @@
 ## P03 - MultiPlayer Game - Space Battle
-### Kyle Gordon
+### Kyle Gordon, Sabin Dheke
 ### Description:
 
 This is simple space game made with Python and Pygame. It has single player against npc, and asteroids. Stay alive and use wormholes to teleport.
