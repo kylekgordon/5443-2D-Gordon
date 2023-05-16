@@ -1,6 +1,6 @@
 ## P04 - MultiPlayer Game - Tiled
 ### Desert Island
-### Kyle Gordon
+### Kyle Gordon, Joshua Williams, Noah Orta, Sabin Dheke
 ### Description:
 
 This is simple tiled game made with Python and Pygame. This is a multiplayer game
